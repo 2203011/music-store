@@ -1,0 +1,67 @@
+git init
+git add .
+git commit -m "Initial commit again"
+git branch -M main
+git remote add origin https://github.com/<your-username>/<repo-name>.git
+git push -u origin main
+
+git push -u origin main --force
+
+
+pipeline {
+    agent any
+
+    environment {
+        // Deploy under a subfolder: C:\inetpub\wwwroot\practical1
+        DEPLOY_DIR = 'C:\\inetpub\\wwwroot\\practical1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Cloning project from GitHub...'
+                git branch: 'main', url: 'https://github.com/BibekGhimireSharma/practical1.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Static portfolio site – no build step needed.'
+                bat 'dir'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deploying portfolio files to IIS folder: %DEPLOY_DIR%"
+
+                bat """
+                if not exist "%DEPLOY_DIR%" mkdir "%DEPLOY_DIR%"
+
+                xcopy /Y /I "index.html" "%DEPLOY_DIR%\\"
+                xcopy /Y /I "about.html" "%DEPLOY_DIR%\\"
+                xcopy /Y /I "style.css" "%DEPLOY_DIR%\\"
+
+                rem If you have an assets/img folder, copy it too:
+                if exist "assets" xcopy /Y /I /E "assets" "%DEPLOY_DIR%\\assets\\"
+                """
+            }
+        }
+
+        stage('Run HTTP Server (IIS serves it)') {
+            steps {
+                echo 'IIS will serve the website. No extra server is started by Jenkins.'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline finished successfully!'
+            echo '👉 Open in browser: http://localhost/practical1/index.html'
+        }
+        failure {
+            echo '❌ Pipeline failed! Check build logs.'
+        }
+    }
+}
